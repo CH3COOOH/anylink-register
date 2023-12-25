@@ -1,0 +1,6 @@
+{
+	"db_path": "/etc/anylink/user.db",
+	"iv_path": "/etc/anylink/ivcodes.db",
+	"srv_host": "127.0.0.1",
+	"srv_port": 8090
+}

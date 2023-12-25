@@ -3,110 +3,110 @@ import json
 import sqlite3
 import time
 import os
+import sys
 
-from gevent import monkey
-from bottle import request, Bottle, run
 import pyotp
+from websocket_server import WebsocketServer
 
-## ----------------- Static
-PATH = 'sm-reg'
-PATH_POST = 'sm-reg'
-IVPATH = ''
-DBPATH = ''
-HOST = '127.0.0.1'
-PORT = 8889
-CMD_RESTART = 'killall -9 anylink && anylink -c server.toml &'
+class Util:
+	def chech_msg(text):
+		if len(text) > 64:
+			return -1
+		try:
+			getInfo = eval(text)
+		except:
+			return -1
+		if type(getInfo) != list:
+			return -1
+		if len(getInfo) != 4:
+			return -1
+		return getInfo
 
-## ----------------- Public var
-app = Bottle()
+	def check_input_info(inputList):
+		## [user, passwd, email]
+		isRight = True
+		if len(inputList[0]) < 5:
+			print('Wrong username.')
+			isRight = False
+		if len(inputList[1]) < 8:
+			print('Wrong password.')
+			isRight = False
+		if re.match("^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]+\\.([a-zA-Z]{2,3}|[0-9]{1,3})(\\]?)$", inputList[2]) == None:
+			print('Wrong mail.')
+			isRight = False
+		return isRight
 
-def check_input(inputList):
-	## [user, passwd, email]
-	isRight = True
-	if len(inputList[0]) < 5:
-		print('Wrong username.')
-		isRight = False
-	if len(inputList[1]) < 8:
-		print('Wrong password.')
-		isRight = False
-	if re.match("^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]+\\.([a-zA-Z]{2,3}|[0-9]{1,3})(\\]?)$", inputList[2]) == None:
-		print('Wrong mail.')
-		isRight = False
-	return isRight
+class DBOP:
+	def __init__(self, db_path, iv_path):
+		self.db_path = db_path
+		self.iv_path = iv_path
+		self.ivs = self.load_iv()
 
-def updateDB(dbname, username, passwd, email):
-	otpSecret = pyotp.random_base32()
-	con = sqlite3.connect(dbname)
-	cur = con.cursor()
-	## Is username used
-	if len(list(cur.execute('SELECT * FROM User WHERE Username=\'%s\'' % username))) > 0:
-		return -1
-	lastline = list(cur.execute('SELECT * FROM User ORDER BY Id DESC LIMIT 1'))
-	if len(lastline) == 0:
-		newid = 0
-	else:
-		newid = lastline[-1][0] + 1
-	sTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-	sql = 'INSERT INTO User VALUES (%d, \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', 1, \'[\"ops\"]\', 1, 0, \'%s\', \'%s\')'\
-		% (newid, username, username, email, passwd, pyotp.random_base32(), sTime, sTime)
-	cur.execute(sql)
-	print(sql)
-	con.commit()
-	con.close()
-	return 0
+	def load_iv(self):
+		with open(self.iv_path, 'r') as o:
+			self.ivs = json.load(o)['iv']
+		return 0
 
-## ----------------- Web
-@app.get('/' + PATH)
-def register():
-	return '''
-	<form action="/%s" method="post">
-		Username: <input name="username" type="text" /> 5+ characters <br>
-		Password: <input name="password" type="password" /> 8+ characters<br>
-		E-mail: <input name="email" type="text" /><br>
-		IV. code: <input name="ivcode" type="text" /><br>
-	<input type="submit" value="OK">
-	</form>
-	''' % PATH_POST
+	def update_iv(self):
+		with open(self.iv_path, 'w') as o:
+			json.dump({'iv': self.ivs}, o)
+		return 0
 
-@app.post('/' + PATH_POST)
-def do_register():
-	username = request.forms.get('username')
-	password = request.forms.get('password')
-	email = request.forms.get('email')
-	ivcode = request.forms.get('ivcode')
-	# print(username)
-	# print(password)
-	# print(email)
-	# print(ivcode)
-	if check_input([username, password, email]) == False:
-		return 'Error input detected.'
-	with open(IVPATH, 'r') as o:
-		ivcode_list = json.load(o)
-	if ivcode in ivcode_list.keys():
-		if ivcode_list[ivcode] == False:
-			return 'IVCode has been used.'
-	else:
-		return 'Illegal IVCode.'
+	def use_iv(self, iv):
+		if iv in self.ivs:
+			del self.ivs[self.ivs.index(iv)]
+			self.update_iv()
+			return 0
+		else:
+			return -1
 
-	if updateDB(DBPATH, username, password, email) < 0:
-		return 'Username exist.'
-	else:
-		# os.system(CMD_RESTART)
-		ivcode_list[ivcode] = False
-		with open(IVPATH, 'w') as o:
-			json.dump(ivcode_list, o)
+	def update_db(self, username, passwd, email):
+		otpSecret = pyotp.random_base32()
+		con = sqlite3.connect(self.db_path)
+		cur = con.cursor()
+		## Is username used
+		if len(list(cur.execute('SELECT * FROM User WHERE Username=\'%s\'' % username))) > 0:
+			return -1
+		lastline = list(cur.execute('SELECT * FROM User ORDER BY Id DESC LIMIT 1'))
+		if len(lastline) == 0:
+			newid = 0
+		else:
+			newid = lastline[-1][0] + 1
+		sTime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+		sql = 'INSERT INTO User VALUES (%d, \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', 1, \'[\"ops\"]\', 1, 0, \'%s\', \'%s\')'\
+			% (newid, username, username, email, passwd, pyotp.random_base32(), sTime, sTime)
+		cur.execute(sql)
+		print(sql)
+		con.commit()
+		con.close()
+		return 0
 
-	return '''
-Well done.<br><br>
+class Srv:
+	def __init__(self, host, port, db_path, iv_path):
+		self.host = host
+		self.port = port
+		self.ut = Util()
+		self.db = DBOP(db_path, iv_path)
 
-Server: <br>
-Username: %s<br>
-Password: ***<br>
-Group: opt<br><br>
+	def msgReceived(self, client, server, msg):
+		getInfo = self.ut.chech_msg(msg)
+		if getInfo == -1:
+			return -1
+		if self.ut.check_input_info(getInfo) == -1:
+			return -1
+		user, passwd, email, iv = getInfo
+		if self.db.use_iv(iv) == -1:
+			return -1
+		server.send_message(client, self.db.update_db(username, passwd, email))
+		return 0
 
-''' % username
-
+	def start(self):
+		server = WebsocketServer(port=self.port, host=self.host)
+		server.set_fn_message_received(self.msgReceived)
+		server.run_forever()
 
 if __name__ == '__main__':
-	monkey.patch_all()
-	run(app, host=HOST, port=PORT, server='gevent', debug=True, reloader=True)
+	with open(sys.argv[1], 'r') as o:
+		conf = json.load(o)
+	s = Srv(conf['srv_host'], conf['srv_port'], conf['db_path'], conf['iv_path'])
+	s.start()
