@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Page</title>
+    <script>
+        var socket = new WebSocket("ws://127.0.0.1:8090");
+        socket.onmessage = function(event) {
+            alert("Feedback: " + event.data);
+        };
+        function validateForm() {
+            var username = document.getElementById('username').value;
+            var password = document.getElementById('password').value;
+            var email = document.getElementById('email').value;
+            var invitecode = document.getElementById('invitecode').value;
+
+//           if (username == "" || password == "" || email == "" || invitecode == "") {
+//               alert("所有输入不能为空");
+//               return false;
+//           }
+//
+//           var passwordPattern = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+//           if (!passwordPattern.test(password)) {
+//               alert("密码必须是8-16位的数字和字母的组合");
+//               return false;
+//           }
+//
+//           var emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+//           if (!emailPattern.test(email)) {
+//               alert("请输入正确的邮箱格式");
+//               return false;
+//           }
+//
+//           var invitecodePattern = /^[a-z0-9]{16}$/;
+//           if (!invitecodePattern.test(invitecode)) {
+//               alert("邀请码必须是16位的数字和小写字母的组合");
+//               return false;
+//           }
+            var data = [username, password, email, invitecode];
+            socket.send(JSON.stringify(data));
+            return true;
+        }
+    </script>
+</head>
+<body>
+    <label for="username">USER:</label><br>
+    <input type="text" id="username" name="username"><br>
+    <label for="password">PASSWD:</label><br>
+    <input type="password" id="password" name="password"><br>
+    <label for="email">E-MAIL:</label><br>
+    <input type="email" id="email" name="email"><br>
+    <label for="invitecode">IVC:</label><br>
+    <input type="text" id="invitecode" name="invitecode"><br>
+    <input type="button" onclick="validateForm()" value="SUBMIT">
+</body>
+</html>
