@@ -88,7 +88,7 @@ class DBOP:
 				newid = 0
 			else:
 				newid = lastline[-1][0] + 1
-			sql = 'INSERT INTO User VALUES (%d, \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', 1, \'[\"ops\"]\', 1, 0, \'%s\', \'%s\')'\
+			sql = 'INSERT INTO User VALUES (%d, \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', 1, \'[\"ops\"]\', 1, 0, \'%s\', \'%s\', '')'\
 				% (newid, username, username, email, passwd, pyotp.random_base32(), sTime, sTime)
 			cur.execute(sql)
 			con.commit()
