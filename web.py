@@ -94,7 +94,7 @@ class DBOP:
 			con.commit()
 			con.close()
 		else:
-			sql = 'INSERT INTO User VALUES (%d, \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', 1, \'[\"ops\"]\', 1, 0, \'%s\', \'%s\')'\
+			sql = 'INSERT INTO User VALUES (%d, \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', 1, \'[\"ops\"]\', 1, 0, \'%s\', \'%s\', '')'\
 				% (0, username, username, email, passwd, pyotp.random_base32(), sTime, sTime)
 		print(sql)
 		return 0
