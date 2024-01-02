@@ -3,5 +3,6 @@
 	"iv_path": "ivcodes.json",
 	"srv_host": "127.0.0.1",
 	"srv_port": 8090,
-    "admin": ["admin0", "1234abcd"]
+    "admin": ["admin0", "1234abcd"],
+    "log_level": 0
 }
